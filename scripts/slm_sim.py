@@ -5,19 +5,17 @@ import math
 from std_msgs.msg import Float32
 from sensor_msgs.msg import JointState
 
-tau_value = 0.0
 
 #Declare Variables to be used
 #SLM Parameters
-k = 0.01; #friction
-m = 0.75; #pendulum mass
-l = 0.36; #pendulum length
-a = l/2
-J = 4/3*(m*(a*a))
-g = 9.8;  #gravity
-tau = 0.0; #entrance of the system
-x1 = 0.0;  #ouput joint1
-x2 = 0.0;  #output joint2
+#k = 0.01; #friction
+#m = 0.75; #pendulum mass
+#l = 0.36; #pendulum length
+#g = 9.8;  #gravity
+#tau = 0.0; #entrance of the system
+#x1 = 0.0;  #ouput joint1
+#x2 = 0.0;  #output joint2
+#dt = 1/100.0 #time differential/step of integration
 
 # Setup Variables to be used
 
@@ -29,21 +27,37 @@ x2 = 0.0;  #output joint2
 #Define the callback functions
 def callback_tau(msg):
      #rospy.loginfo
-     global tau_value
-     tau_value = msg.data
+     global tau
+     tau = msg.data
 
-def joints():
-     pubX1 = rospy.Publisher('/joint_states', Float32, queue_size=10)
-     pubX2 = rospy.Publisher('/joint_states', Float32, queue_size=10)
-     rate = rospy.Rate(10)
-     while not rospy.is_shutdown():
-          x1 = x1 + x2
-          x1_rad = math.radians(x1)
-          x2_dot = (1/(J+m*(a*a)) * (- (m*g*a) * math.cos(x1_rad) - k * x2 + tau_value ))
-          x2 = x2 + x2_dot 
-          pubX1.publish(x1)
-          pubX2.publish(x2)
-          rate.sleep()
+def dynamics():
+    global k,m,l,g,tau,x1,x2,dt
+    k = 0.01; #friction
+    m = 0.75; #pendulum mass
+    l = 0.36; #pendulum length
+    g = 9.8;  #gravity
+    tau = 0.0; #entrance of the system
+    x1 = 0.0;  #ouput joint1
+    x2 = 0.0;  #output joint2
+    dt = 1/100.0 #time differential/step of integration
+    rate = rospy.Rate(10)
+    while not rospy.is_shutdown():
+        # SLM governing equation
+        a = l/2
+        J = 4.0/3.0*(m*(a**2))
+        x1 += x2 * dt  # Update x1 based on x2
+        x2_dot = 1 / J * ((tau - m * g * a * np.cos(x1)) - (k * x2))
+        x2 += x2_dot * dt  # Update x2 based on x2_dot
+
+        # Publish joint state
+        joint_state_pub = rospy.Publisher("/joint_states", JointState, queue_size=10)
+        joint_state_msg = JointState()
+        joint_state_msg.header.stamp = rospy.Time.now()
+        joint_state_msg.name = ['joint2']
+        joint_state_msg.position = [wrap_to_Pi(x1)]
+        joint_state_msg.velocity = [x2]
+        joint_state_pub.publish(joint_state_msg)
+        rate.sleep()
 
   #wrap to pi function
 def wrap_to_Pi(theta):
@@ -64,22 +78,15 @@ if __name__=='__main__':
 
 
     # Setup the Subscribers
-    #rospy.Subscriber('tau_topic', Float32, callback_tau)
+    rospy.Subscriber('tau_topic', Float32, callback=callback_tau)
 
 
     #Setup de publishers
-    pub = rospy.Publisher('/joint_states',Float32,queue_size=10)
 
     print("The SLM sim is Running")
     try:
-        joints()
-        #Run the node (YOUR CODE HERE)
-        
-            #WRITE YOUR CODE HERE
-            #WRITE YOUR CODE HERE
-            #WRITE YOUR CODE HERE
-
-            #Wait and repeat
+        dynamics()
+        rospy.loginfo('x1: {}, x2: {}'.format(x1,x2))
         loop_rate.sleep()
     
     except rospy.ROSInterruptException:
