@@ -5,25 +5,6 @@ import math
 from std_msgs.msg import Float32
 from sensor_msgs.msg import JointState
 
-
-#Declare Variables to be used
-#SLM Parameters
-#k = 0.01; #friction
-#m = 0.75; #pendulum mass
-#l = 0.36; #pendulum length
-#g = 9.8;  #gravity
-#tau = 0.0; #entrance of the system
-#x1 = 0.0;  #ouput joint1
-#x2 = 0.0;  #output joint2
-#dt = 1/100.0 #time differential/step of integration
-
-# Setup Variables to be used
-
-# Declare the input Message
-
-# Declare the  process output message
-
-
 #Define the callback functions
 def callback_tau(msg):
      #rospy.loginfo
